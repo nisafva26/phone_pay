@@ -1,8 +1,12 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:dreampot_phonepay/common/rounded_button.dart';
+import 'package:dreampot_phonepay/module/components/authentication_widget.dart';
 import 'package:dreampot_phonepay/module/components/card_netbanking_widget.dart';
+import 'package:dreampot_phonepay/module/components/enter_otp_widget.dart';
 import 'package:dreampot_phonepay/module/components/product_header_card.dart';
+import 'package:dreampot_phonepay/module/components/timer_component.dart';
 import 'package:dreampot_phonepay/utils/theme/app_colors.dart';
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/cupertino.dart';
@@ -19,11 +23,18 @@ class PhonePayScreen extends StatefulWidget {
 }
 
 class _PhonePayScreenState extends State<PhonePayScreen> {
+  PageController pageController = PageController();
+  TextEditingController emailController = TextEditingController();
+  TextEditingController mobileController = TextEditingController();
+  TextEditingController otpController = TextEditingController();
+  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> formKeyOTP = GlobalKey<FormState>();
   int currentStep = 0;
   bool isAuthenticationDone = true;
   bool isPaymentDone = true;
   bool isQuizDone = true;
   double progress = 0.2;
+  bool sentOtp = false;
 
   List<int> numbers = [1, 2, 3];
 
@@ -62,6 +73,25 @@ class _PhonePayScreenState extends State<PhonePayScreen> {
   void initState() {
     super.initState();
     getUpi();
+    pageController = PageController(initialPage: currentStep);
+    // pageController.addListener(_handlePageChange);
+  }
+
+  @override
+  void dispose() {
+    pageController.dispose();
+    super.dispose();
+  }
+
+  void _handleStepChange() {
+    setState(() {
+      currentStep += 1;
+      pageController.animateToPage(
+        currentStep,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.ease,
+      );
+    });
   }
 
   Future<void> getUpi() async {
@@ -78,7 +108,7 @@ class _PhonePayScreenState extends State<PhonePayScreen> {
 
     setState(() {});
 
-    log('upi apps : ${upiAppsListAndroid}');
+    log('upi apps : $upiAppsListAndroid');
   }
 
   @override
@@ -130,7 +160,7 @@ class _PhonePayScreenState extends State<PhonePayScreen> {
                 activeStepTextColor: AppColors.lightBlue,
                 unreachedStepTextColor: Colors.black54,
                 activeStepIconColor: AppColors.lightBlue,
-
+                enableStepTapping: false,
                 lineStyle: const LineStyle(
                     lineLength: 70,
                     lineThickness: 3,
@@ -188,59 +218,220 @@ class _PhonePayScreenState extends State<PhonePayScreen> {
             const SizedBox(
               height: 7,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Container(
+              height: MediaQuery.of(context).size.height / 1.5,
+              width: MediaQuery.of(context).size.width,
+              child: PageView(
+                controller: pageController,
+                physics: const NeverScrollableScrollPhysics(), // Disable swipe
                 children: [
-                  const Text(
-                    'Preferred Payments',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w800, height: 1, fontSize: 16),
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
+                  // Content for Step 0
                   Container(
-                    height: 90,
-                    child: GridView.builder(
-                      itemCount: upiAppLogo.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4, mainAxisSpacing: 3, crossAxisSpacing: 7),
-                      itemBuilder: (context, index) {
-                        return Container(
-                          height: 100,
-                          width: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xffEAECF0)),
-                            color: Colors.white,
-                            // image: DecorationImage(
-                            //     image: NetworkImage(upiAppLogo[index]))
+                    height: MediaQuery.of(context).size.height / 1.5,
+                    width: MediaQuery.of(context).size.width,
+                    child: Center(
+                        child: Column(
+                      children: [
+                        //first showing the authentication screen and then once the otp is sent it shows the otp screen
+                        sentOtp == false
+                            ? AuthenticationWidget(
+                                formKey: formKey,
+                                emailController: emailController,
+                                mobileController: mobileController,
+                                onButtonPressed: () {
+                                  log('button pressed');
+                                  Future.delayed(const Duration(milliseconds: 300))
+                                      .then((value) {
+                                    log('after delay');
+                                    setState(() {
+                                      sentOtp = true;
+                                    });
+                                  });
+                                },
+                              )
+                            : EnterOtpWidget(
+                                formKey: formKeyOTP,
+                                otpController: otpController,
+                                onButtonPressed: () {
+                                  log('button pressed');
+                                  Future.delayed(const Duration(milliseconds: 300))
+                                      .then((value) {
+                                    log('otp verified - going to payment screen');
+                                    _handleStepChange();
+                                  });
+                                },
+                                editCallBack: () {
+                                  setState(() {
+                                    sentOtp = false;
+                                  });
+                                },
+                              ),
+                      ],
+                    )),
+                  ),
+                  //step 2
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Preferred Payments',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, height: 1, fontSize: 16),
+                        ),
+                        const SizedBox(
+                          height: 15,
+                        ),
+                        Container(
+                          height: 90,
+                          child: GridView.builder(
+                            itemCount: upiAppLogo.length,
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                mainAxisSpacing: 3,
+                                crossAxisSpacing: 7),
+                            itemBuilder: (context, index) {
+                              return Container(
+                                height: 100,
+                                width: 100,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xffEAECF0)),
+                                  color: Colors.white,
+                                  // image: DecorationImage(
+                                  //     image: NetworkImage(upiAppLogo[index]))
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    // go to quiz step .
+                                    _handleStepChange();
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6.0),
+                                    child: SvgPicture.asset(upiAppLogo[index]),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(6.0),
-                            child: SvgPicture.asset(upiAppLogo[index]),
-                          ),
-                        );
-                      },
+                        ),
+                        const SizedBox(
+                          height: 13,
+                        ),
+                        const Text(
+                          'Other payment methods',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              height: 1,
+                              fontSize: 16,
+                              fontFamily: 'Avenir'),
+                        ),
+                        const SizedBox(
+                          height: 13,
+                        ),
+                        const CardsNetbankingWidget()
+                      ],
                     ),
                   ),
-                  const SizedBox(
-                    height: 13,
+                  //step 3
+                  Container(
+                    height: MediaQuery.of(context).size.height,
+                    width: MediaQuery.of(context).size.width,
+                    child: Column(
+                      children: [
+                        Stack(
+                          children: [
+                            Container(
+                              height: MediaQuery.of(context).size.height / 3.2,
+                              width: MediaQuery.of(context).size.width,
+                              color: Colors.white,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 15, vertical: 10),
+                              child: Container(
+                                height: MediaQuery.of(context).size.height / 4,
+                                width: MediaQuery.of(context).size.width,
+                                decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    image: const DecorationImage(
+                                        image: NetworkImage(
+                                            'https://static.toiimg.com/thumb/msid-104744672,width-400,resizemode-4/104744672.jpg'),
+                                        fit: BoxFit.cover)),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 20,
+                              top: MediaQuery.of(context).size.height / 4.9,
+                              //left: MediaQuery.of(context).size.width - 60,
+                              child: Container(
+                                padding: EdgeInsets.zero,
+                                decoration: const BoxDecoration(
+                                    shape: BoxShape.circle, color: Colors.white),
+                                child: TimeComponent(
+                                  key: Key(
+                                      DateTime.now().microsecondsSinceEpoch.toString()),
+                                  quizLimit: 100,
+                                  quizStart: 0,
+                                  timerDone: () {
+                                    log('timer done');
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Text(
+                          'Who is this actor?',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, height: 1, fontSize: 18),
+                        ),
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                          child: GridView.builder(
+                            itemCount: upiAppLogo.length,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 10,
+                                mainAxisExtent: 60,
+                                crossAxisSpacing: 7),
+                            itemBuilder: (context, index) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(100),
+                                  border: Border.all(color: const Color(0xffEAECF0)),
+                                  color: Colors.white,
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    // end of stepper
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6.0),
+                                    child: Center(
+                                        child: Text(
+                                      'Option $index',
+                                      style: const TextStyle(
+                                          fontSize: 14, fontWeight: FontWeight.w400),
+                                    )),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Text(
-                    'Other payment methods',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                        fontSize: 16,
-                        fontFamily: 'Avenir'),
-                  ),
-                  const SizedBox(
-                    height: 13,
-                  ),
-                  const CardsNetbankingWidget()
                 ],
               ),
             ),
@@ -308,70 +499,5 @@ class _PhonePayScreenState extends State<PhonePayScreen> {
       //   ),
       // ),
     );
-  }
-
-  List<Step> getSteps() {
-    bool isStepComplete(int step) {
-      // Implement your own criteria here
-      // For example, check if all required fields are filled in a form
-      if (step == 0) {
-        // Check criteria for Step 1
-
-        return isAuthenticationDone;
-
-        // Your validation logic for Step 1;
-      } else if (step == 1) {
-        return isPaymentDone;
-      } else if (step == 2) {
-        // Check criteria for Step 3
-        return isQuizDone;
-      }
-      // Handle other steps if needed
-      return false; // Default to false if step is not explicitly handled
-    }
-
-    StepState getStepState(int step) {
-      // Set the StepState based on the completion status
-      return isStepComplete(step) ? StepState.complete : StepState.error;
-    }
-
-    return <Step>[
-      Step(
-          state: currentStep == 0 ? StepState.editing : getStepState(0),
-          isActive: currentStep >= 0,
-          title: const Text(
-            'Authentication',
-            style: TextStyle(fontSize: 16),
-          ),
-          content: Container(
-            height: 200,
-            width: MediaQuery.of(context).size.width,
-            color: Colors.black,
-          )),
-      Step(
-          state: currentStep == 1 ? StepState.editing : getStepState(0),
-          isActive: currentStep >= 1,
-          title: const Text(
-            'Payment',
-            style: TextStyle(fontSize: 16),
-          ),
-          content: Container(
-            height: 200,
-            width: MediaQuery.of(context).size.width,
-            color: Colors.black,
-          )),
-      Step(
-          state: currentStep == 2 ? StepState.editing : getStepState(0),
-          isActive: currentStep >= 2,
-          title: const Text(
-            'Answer a simple quiz',
-            style: TextStyle(fontSize: 16),
-          ),
-          content: Container(
-            height: 200,
-            width: MediaQuery.of(context).size.width,
-            color: Colors.black,
-          )),
-    ];
   }
 }

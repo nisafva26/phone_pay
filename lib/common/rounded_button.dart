@@ -66,6 +66,7 @@ class RoundedButton extends StatelessWidget {
               ),
             ),
           ),
+       
           if (isLoading)
             SizedBox(
               width: 15,

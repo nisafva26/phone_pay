@@ -29,6 +29,8 @@ class AnimatedCircularChart extends StatelessWidget {
       isTotalLess = true;
     }
     return CircularPercentIndicator(
+      
+    
       radius: size! / 3,
       percent: percentageValues! / (isTotalLess ? percentageValues! : total!),
       center: Column(
