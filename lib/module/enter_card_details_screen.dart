@@ -1,16 +1,24 @@
 import 'dart:developer';
 
+import 'package:animate_do/animate_do.dart';
 import 'package:dreampot_phonepay/common/rounded_button.dart';
+import 'package:dreampot_phonepay/module/components/card_expiry_input_formatter.dart';
 import 'package:dreampot_phonepay/module/components/product_header_card.dart';
 import 'package:dreampot_phonepay/utils/theme/app_colors.dart';
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:lottie/lottie.dart';
 
 class EnterCardDeatailsScreen extends StatefulWidget {
-  const EnterCardDeatailsScreen({super.key});
+  final VoidCallback onSubmitButtonPressed;
+  final VoidCallback onBackButtonPressed;
+  EnterCardDeatailsScreen(
+      {super.key,
+      required this.onSubmitButtonPressed,
+      required this.onBackButtonPressed});
 
   @override
   State<EnterCardDeatailsScreen> createState() => _EnterCardDeatailsScreenState();
@@ -22,134 +30,62 @@ class _EnterCardDeatailsScreenState extends State<EnterCardDeatailsScreen> {
   TextEditingController cvvController = TextEditingController();
   TextEditingController nameController = TextEditingController();
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  final RegExp cardExpiryRegExp = RegExp(r'^\d{0,2}\/\d{0,2}$');
+
+  bool isPayButtonVisible = false;
 
   bool isPaymentSuccess = false;
   List<int> numbers = [1, 2, 3];
   int currentStep = 1;
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    cardNumberController.dispose();
+    expiryController.dispose();
+    cvvController.dispose();
+    nameController.dispose();
+
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios,
-            color: Colors.white,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: Image.asset(
-          'assets/navlogo.png',
-          height: 30,
-        ),
-        actions: [
-          SvgPicture.asset('assets/images/payments/cross.svg'),
-          const SizedBox(
-            width: 10,
-          )
-        ],
-      ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-              child: ProductHeaderCard(),
-            ),
-            const Divider(
-              height: 2,
-              thickness: 1,
-              color: AppColors.borderColor,
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            SizedBox(
-              width: MediaQuery.of(context).size.width,
-              child: EasyStepper(
-                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
-                activeStep: currentStep,
-                activeStepBackgroundColor: AppColors.white,
-                finishedStepBackgroundColor: AppColors.lightBlue,
-                finishedStepBorderColor: Colors.white,
-                finishedStepBorderType: BorderType.normal,
-                activeStepBorderType: BorderType.normal,
-                activeStepBorderColor: AppColors.lightBlue,
-                unreachedStepBorderColor: Colors.grey[200],
-                unreachedStepBorderType: BorderType.normal,
-                finishedStepTextColor: Colors.black,
-                activeStepTextColor: AppColors.lightBlue,
-                unreachedStepTextColor: Colors.black54,
-                activeStepIconColor: AppColors.lightBlue,
-
-                lineStyle: const LineStyle(
-                    lineLength: 70,
-                    lineThickness: 3,
-                    lineSpace: 4,
-                    lineType: LineType.normal,
-                    defaultLineColor: AppColors.lightBlue,
-                    progress: 0,
-                    unreachedLineColor: Color.fromARGB(156, 184, 170, 183)
-
-                    // progressColor: Colors.purple.shade700,
-                    ),
-                showLoadingAnimation: false,
-                borderThickness: 3,
-                internalPadding: 20,
-                // loadingAnimation: 'assets/loading_circle.json',
-                stepRadius: 12,
-
-                steps: [
-                  EasyStep(
-                    icon: currentStep == 0
-                        ? const Icon(
-                            CupertinoIcons.circle_filled,
-                            color: AppColors.lightBlue,
-                            size: 1,
-                          )
-                        : const Icon(Icons.done),
-                    title: 'Authentication',
-                    // lineText: 'Add Address Info',
-                  ),
-                  EasyStep(
-                    icon: currentStep == 1
-                        ? const Icon(
-                            Icons.circle_rounded,
-                            color: AppColors.lightBlue,
-                            fill: 1,
-                            size: 1,
-                          )
-                        : const Icon(Icons.done),
-                    title: 'Payment',
-                    // lineText: 'Go To Checkout',
-                  ),
-                  EasyStep(
-                    icon: currentStep == 2
-                        ? const Icon(
-                            CupertinoIcons.circle_filled,
-                            color: AppColors.lightBlue,
-                            fill: 1,
-                            size: 1,
-                          )
-                        : const Icon(Icons.done),
-                    title: 'Answer a simple quiz',
-                    // lineText: 'Choose Payment Method',
-                  ),
-                ],
-                onStepReached: (index) => setState(() => currentStep = index),
-              ),
-            ),
-            const SizedBox(
-              height: 20,
-            ),
             if (isPaymentSuccess == false)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    InkWell(
+                      onTap: () {
+                        widget.onBackButtonPressed();
+                      },
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.arrow_back_ios,
+                            size: 16,
+                            color: AppColors.lightBlue,
+                          ),
+                          Text(
+                            'Back',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.lightBlue),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 15,
+                    ),
                     const Text(
                       'Enter your Credit card details',
                       style:
@@ -176,6 +112,10 @@ class _EnterCardDeatailsScreenState extends State<EnterCardDeatailsScreen> {
                                   : "Field should not be empty";
                             },
                             keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                              FilteringTextInputFormatter.allow(RegExp(r'\d')),
+                              _CreditCardInputFormatter(),
+                            ],
                             decoration: InputDecoration(
                               hintText: '---- ---- ---- ----',
                               hintStyle: const TextStyle(color: AppColors.grey),
@@ -228,6 +168,11 @@ class _EnterCardDeatailsScreenState extends State<EnterCardDeatailsScreen> {
                                         : "Field should not be empty";
                                   },
                                   keyboardType: TextInputType.number,
+                                  inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.allow(RegExp(r'\d')),
+                                    LengthLimitingTextInputFormatter(5),
+                                    CardExpiryInputFormatter(),
+                                  ],
                                   decoration: InputDecoration(
                                     hintText: 'MM/YY',
                                     hintStyle: const TextStyle(color: AppColors.grey),
@@ -329,6 +274,9 @@ class _EnterCardDeatailsScreenState extends State<EnterCardDeatailsScreen> {
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF000000),
                             ),
+                            onFieldSubmitted: (value) {
+                              setState(() {});
+                            },
                             validator: (value) {
                               return value!.isNotEmpty
                                   ? null
@@ -372,55 +320,69 @@ class _EnterCardDeatailsScreenState extends State<EnterCardDeatailsScreen> {
                     const SizedBox(
                       height: 15,
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: RoundedButton(
-                        text: 'Pay Rs 500',
-                        callback: () {
-                          if (formKey.currentState!.validate()) {
-                            log('valid');
-                            setState(() {
-                              isPaymentSuccess = true;
-                            });
-                          }
-                        },
-                        isLoading: false,
-                      ),
-                    )
+                    if (cardNumberController.text.isNotEmpty &&
+                        expiryController.text.isNotEmpty &&
+                        cvvController.text.isNotEmpty &&
+                        nameController.text.isNotEmpty)
+                      FadeInUp(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          child: RoundedButton(
+                            text: 'Pay Rs 500',
+                            callback: () {
+                              if (formKey.currentState!.validate()) {
+                                log('valid');
+                                setState(() {
+                                  isPaymentSuccess = true;
+                                });
+                                Future.delayed(Duration(seconds: 2)).then((value) {
+                                  widget.onSubmitButtonPressed();
+                                });
+                              }
+                            },
+                            isLoading: false,
+                          ),
+                        ),
+                      )
                   ],
                 ),
               ),
             if (isPaymentSuccess == true)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                child: Column(
-                  children: [
-                    Container(
-                        height: 200,
-                        width: 200,
-                        child: Lottie.asset('assets/images/payments/success_anim.json',
-                            fit: BoxFit.cover)),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    const Text(
-                      'Your payment was successful.',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+              Container(
+                height: MediaQuery.of(context).size.height / 2,
+                width: MediaQuery.of(context).size.width,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                          height: 200,
+                          width: 200,
+                          child: Lottie.asset('assets/images/payments/success_anim.json',
+                              fit: BoxFit.cover)),
+                      const SizedBox(
+                        height: 10,
                       ),
-                    ),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    const Text(
-                      'You will be taken to the quiz in a few seconds',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
+                      const Text(
+                        'Your payment was successful.',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    )
-                  ],
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      const Text(
+                        'You will be taken to the quiz in a few seconds',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               )
           ],
@@ -429,3 +391,36 @@ class _EnterCardDeatailsScreenState extends State<EnterCardDeatailsScreen> {
     );
   }
 }
+
+class _CreditCardInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final text = newValue.text;
+    if (text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String updatedText = '';
+    for (int i = 0; i < text.length; i++) {
+      if (i > 0 && i % 4 == 0) {
+        updatedText += ' '; // Add a space after every 4 digits
+      }
+      updatedText += text[i];
+    }
+
+    return newValue.copyWith(
+      text: updatedText,
+      selection: TextSelection.collapsed(offset: updatedText.length),
+    );
+  }
+}
+//In this example, we use a TextField to capture the credit card number, and we apply a 
+//custom formatter (_CreditCardInputFormatter) using the inputFormatters property. 
+//The _CreditCardInputFormatter ensures that a space is inserted after every 4 digits as the user types.
+// It also allows only numeric input.
+
+
+
+
+

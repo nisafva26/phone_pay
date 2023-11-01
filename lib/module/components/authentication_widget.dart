@@ -100,6 +100,9 @@ class AuthenticationWidget extends StatelessWidget {
                   validator: (value) {
                     return value!.isNotEmpty ? null : "Field should not be empty";
                   },
+                  onFieldSubmitted: (value) {
+                    
+                  },
                   decoration: InputDecoration(
                     // hintText: 'name',
                     // hintStyle: TextStyle(color: AppColors.grey),

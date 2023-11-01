@@ -112,6 +112,7 @@ class _EnterOtpWidgetState extends State<EnterOtpWidget> {
                   validator: (value) {
                     return value!.isNotEmpty ? null : "Field should not be empty";
                   },
+                  keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     // hintText: 'name',
                     // hintStyle: TextStyle(color: AppColors.grey),
